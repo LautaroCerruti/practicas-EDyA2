@@ -102,3 +102,19 @@ mejorGanancia t = let conS = conSufijos t
                   in bigger
                     where 
                         fsp (a, arb) = (maxT arb) - a
+
+
+data T a = Em | N (T a) a (T a)
+altura :: T a -> Int
+altura Em = 0
+altura (N l x r ) = 1 + max (altura l) (altura r)
+
+combinar :: T a -> T a -> T a
+combinar Em tr = tr
+combinar tr Em = tr
+combinar (N l x r) tr = N (combinar l r) x tr
+
+filterT :: (a->Bool) -> T a -> T a
+filterT f Em = Em
+filterT f (N l a r) = let ((l', c), r') = (filterT f l ||| f a) ||| filterT f r
+                         in if c then N l' a r' else combinar l' r'
