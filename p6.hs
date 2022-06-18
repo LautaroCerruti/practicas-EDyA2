@@ -97,14 +97,13 @@ maxT t = reduce max 0 t
 
 maxAll t = mapreduce maxT max 0 t
 
-mejorGanancia t = let conS = conSufijos t
-                      bigger = mapreduce fsp max 0 conS
-                  in bigger
+mejorGanancia t = mapreduce fsp max 0 (conSufijos t)
                     where 
                         fsp (a, arb) = (maxT arb) - a
 
 
 data T a = Em | N (T a) a (T a)
+    deriving Show
 altura :: T a -> Int
 altura Em = 0
 altura (N l x r ) = 1 + max (altura l) (altura r)
@@ -118,3 +117,28 @@ filterT :: (a->Bool) -> T a -> T a
 filterT f Em = Em
 filterT f (N l a r) = let ((l', c), r') = (filterT f l ||| f a) ||| filterT f r
                          in if c then N l' a r' else combinar l' r'
+
+quicksort :: Ord a => T a -> T a
+quicksort Em = Em
+quicksort (N l a r) = let arr = combinar l r 
+                          (l', r') = quicksort (filterT (a>) arr) ||| quicksort (filterT (a<) arr) 
+                      in N l' a r'
+
+tn :: T Int
+tn = N (N (N Em 2 Em) 512 (N Em 64 Em)) 8 (N (N (N Em 16 Em) 32 (N Em 256 Em)) 4 (N Em 128 Em))
+
+
+splitAtT :: BTree a -> Int -> (BTree a, BTree a)
+splitAtT Empty _ = (Empty, Empty)
+splitAtT t i = takeT i t ||| dropT i t
+
+rebalance Empty = Empty
+rebalance t@(Node 1 _ _ _) = t
+rebalance t = let n = size t
+                  (l, r) = splitAtT t (div n 2)
+                  (l', r') = rebalance l ||| rebalance r
+                  v = nths r' 1
+              in Node n l' v (dropT 1 r')
+
+unbalanced = Node 3 Empty 3 (Node 2 Empty 1 (Node 1 Empty 2 Empty))
+treeRB = (Node 6 Empty 1 (Node 5 Empty 2 (Node 4 Empty 3 (Node 3 Empty 4 (Node 2 Empty 5 (Node 1 Empty 6 Empty))))))
