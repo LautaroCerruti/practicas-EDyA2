@@ -137,8 +137,8 @@ rebalance t@(Node 1 _ _ _) = t
 rebalance t = let n = size t
                   (l, r) = splitAtT t (div n 2)
                   (l', r') = rebalance l ||| rebalance r
-                  v = nths r' 1
-              in Node n l' v (dropT 1 r')
+                  (v, w1) = nths r' 1 ||| (dropT 1 r')
+              in Node n l' v w1
 
 unbalanced = Node 3 Empty 3 (Node 2 Empty 1 (Node 1 Empty 2 Empty))
 treeRB = (Node 6 Empty 1 (Node 5 Empty 2 (Node 4 Empty 3 (Node 3 Empty 4 (Node 2 Empty 5 (Node 1 Empty 6 Empty))))))

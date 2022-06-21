@@ -59,6 +59,31 @@ matchParen2 s = let (i, f) = scanS (+) 0 (mapS parenToInt s :: A.Arr Int)
 parente = fromList [Open,Open,Close,Open,Close,Close] :: A.Arr Paren
 parente2 = fromList [Close,Open] :: A.Arr Paren
 
+--5
+mapreduce mf rf b s | lengthS s == 0 = b 
+                    | lengthS s == 1 = mf (nthS s 0)
+                    | otherwise = let NODE l r = showtS s
+                                      (le, ri) = mapreduce mf rf b l ||| mapreduce mf rf b r
+                                    in rf le ri
+
+cuaturpa v = let au = max v 0
+             in (au, au, au, v)
+
+reduche (m, p, s, t) (m', p', s', t') = (maximum [m, m', (s + p')], max p (t + p'), max s' (t' + s), t + t')
+
+mcss t = let (a, b, c, d) = (mapreduce cuaturpa reduche (0, 0, 0, 0) t)
+         in a
+
+sccml s = mcss (tabulateS (\i -> if i == (lengthS s - 1) || (nthS s (i+1)) < (nthS s i) then -(lengthS s) else 1) (lengthS s) :: A.Arr Int) + 1
+
+tot = fromList [3, 1, 2, 3, 1, 9] :: A.Arr Int
+scctest = fromList [9, 3, 5, 1, 3, 4, 5, 6, 8, 1] :: A.Arr Int
+scctest2 = fromList [5, 6, 2, 3, 5, 1, 9] :: A.Arr Int
+scctest3 = fromList [1, 4, 6, 7, 8, 11, 12, 3] :: A.Arr Int
+{-
+sccml2 s = let (i, (t1,t2)) = scanS (\(a,b) (x,y) -> (x, if a < x then b + y else y)) (0,0) (mapS (\x -> (x, 1)) s) 
+            in max (mapreduce (\(x,y) -> y) max 0 i) t2 
+            -}
 --6
 multiplos s = lengthS (filterS (0==) (joinS (tabulateS (\i -> mapS (mod (nthS s i)) (dropS s (i+1))) ((lengthS s)-1) :: A.Arr (A.Arr Int))))
 
@@ -117,7 +142,43 @@ collect s | lengthS s == 0 = emptyS
                             keys = groupS (\a b -> if a > b then GT else if a < b then LT else EQ) (sort compi (mapS (\(x, y) -> x) s))
                         in mapS (\x -> (x, mapS (\(x, y) -> y) (filterS (\(y, z) -> y == x) s))) keys
 
+collect2 :: Ord a => A.Arr (a,b) -> A.Arr (a, A.Arr b)
+collect2 s | lengthS s == 0 = emptyS
+           | lengthS s == 1 = let (a,b) = nthS s 0
+                              in singletonS (a, singletonS b)
+           | otherwise = let ordered = sort (\(x, y) (a, b) -> if x > a then GT else if x < a then LT else EQ) s
+                         in reduceS f emptyS (mapS (\(x,y) -> singletonS (x, singletonS y)) ordered)
+                            where
+                                cmp (a, _) (x, _) = if a == x then EQ else if a > x then GT else LT
+                                f l r | lengthS l == 0 = r
+                                      | lengthS r == 0 = l
+                                      | otherwise = case cmp (nthS l (lengthS l-1)) (nthS r 0) of
+                                                        EQ ->  appendS (takeS l (lengthS l -1)) (appendS (singletonS (fst (nthS l (lengthS l-1)), appendS (snd (nthS l (lengthS l-1))) (snd (nthS r 0)))) (dropS r 1))
+                                                        _ -> appendS l r
+
 l1 = fromList [1,1,1,1,3,3,4,5,1,2,3,3,3,3,11,12,12,12,12] :: A.Arr Int
 l2 = fromList [1,2,8,9,10] :: A.Arr Int
 
 l3 = fromList [(2, "A"),(1, "B"),(1, "C"),(2, "D")] :: A.Arr (Int, [Char])
+
+--8
+
+--mapCollectReduce :: (a->(b,c))->((b,c)->(b,c)->(b,c))->(b,c)->A.Arr a -> (b,c)
+mapCollectReduce f g s = mapS g (collect2 (mapS f s))
+
+estud = fromList[("Julieta", fromList[40,60,70]), ("Lautaro", fromList[67,87,85]), ("Ramon", fromList[10,40,30]), ("Mimi", fromList[90,95,97])] :: A.Arr ([Char], A.Arr Int)
+-- <(2, 70), (1, 87), (3, 40), (1, 97)> -> <(1, <87, 97>), (2, <70>), (3, <40>)>
+
+datosIngreso s = mapCollectReduce mapopo redux s
+                    where
+                        mapopo (x, sn) = let average = div (reduceS (+) 0 sn) (lengthS sn) 
+                                         in if average >= 70 then (1, average) else if average > 50 then (2, average) else (3, average)
+                        redux (k, avgs) = (lengthS avgs, reduceS (max) 0 avgs)
+
+--9
+countCaract :: A.Arr (A.Arr Char) -> A.Arr (Char, Int)
+countCaract s = mapCollectReduce (\x -> (x, 1)) (\(k, xs) -> (k, lengthS xs)) (joinS s)
+
+huffman s = collect2 (mapS (\(x, y) -> (y, x)) (countCaract s))
+
+texts = fromList [fromList "estoy con los flows de ninguno" , fromList "otra noche haciendo plata para bruno", fromList "full ice sera su futuro", fromList "le voy a dar lo que mi madre no tuvo"] :: A.Arr (A.Arr Char)
